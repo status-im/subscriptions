@@ -17,6 +17,8 @@ function getSalary(salary) {
   return (amount * BigInt(USD_PRECISION)) / BigInt(SECONDS_IN_A_YEAR)
 }
 
+const toWei = amt => web3.utils.toWei(amt, 'ether');
+
 // For documentation please see https://embark.status.im/docs/contracts_testing.html
 config({
   //deployment: {
@@ -44,16 +46,17 @@ contract("subscription", function () {
   this.timeout(0);
 
   it("should create an agreement", async function () {
-    //const salary1 = (new web3.BigNumber(100000)).times(USD_PRECISION).dividedToIntegerBy(SECONDS_IN_A_YEAR)
-
     let balance = await web3.eth.getBalance(accounts[8])
-    console.log({accounts, balance}, TestToken.options.address)
-    // Subscription.methods.createAgreement(
-    //   receiver,
-    //   payor,
-    //   TestToken.address
+    const agreementCreation = await Subscription.methods.createAgreement(
+      receiver,
+      payor,
+      TestToken.address,
+      toWei("100000"),
+      "0",
+      "ipfs/hash"
+    ).send({ from: payor })
+    console.log({accounts, balance}, agreementCreation, agreementCreation.events)
 
-    // )
   });
 
   });

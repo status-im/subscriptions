@@ -147,7 +147,7 @@ contract Subscription {
           payor,
           annualAmount,
           description,
-          startDate
+          startDate > 0 ? startDate : now
      );
 
     }
