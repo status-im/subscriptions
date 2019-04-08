@@ -1,0 +1,4 @@
+{
+  "warnIfMetamask": true,
+  "blockchainClient": "geth"
+}
