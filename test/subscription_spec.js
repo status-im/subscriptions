@@ -1,6 +1,6 @@
 /*global contract, config, it, assert*/
 const Subscription = require('Embark/contracts/Subscription');
-const StandardToken = require('Embark/contracts/StandardToken');
+const TestToken = require('Embark/contracts/TestToken');
 
 let accounts;
 let payor;
@@ -29,7 +29,7 @@ config({
     "Subscription": {
       args: []
     },
-    "StandardToken": {
+    "TestToken": {
       args: []
     }
   }
@@ -47,11 +47,11 @@ contract("subscription", function () {
     //const salary1 = (new web3.BigNumber(100000)).times(USD_PRECISION).dividedToIntegerBy(SECONDS_IN_A_YEAR)
 
     let balance = await web3.eth.getBalance(accounts[8])
-    console.log({accounts, balance}, StandardToken.options.address)
+    console.log({accounts, balance}, TestToken.options.address)
     // Subscription.methods.createAgreement(
     //   receiver,
     //   payor,
-    //   StandardToken.address
+    //   TestToken.address
 
     // )
   });
