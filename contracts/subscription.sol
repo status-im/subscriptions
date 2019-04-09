@@ -111,14 +111,17 @@ contract Subscription {
 
       // Pay it out
       agreements[agreementId].lastPayment = now;
-      //dai.transfer(recipient, amount);
+      dai.transfer(recipient, amount);
       //emit MemberPaid( recipient,  amount, justification);
     }
 
     function supply(uint256 amount) public returns (uint256) {
       uint256 balance = payorBalances[msg.sender];
-        // do transfer
+      dai.transferFrom(msg.sender, address(this), amount);
+      compound.supply(daiAddress, amount);
       payorBalances[msg.sender] = balance.add(amount);
+      //TODO EMIT EVENT
+      return 0;
     }
 
     function createAgreement(

@@ -52,7 +52,7 @@ contract("subscription", function () {
     await TestToken.methods.mint(toWei('1000000')).send({from: payor})
   })
 
-  describe('createAgreement and withdraw flow', function() {
+  describe('createAgreement and  supply withdraw flow', function() {
     const annualSalary = toWei("100000")
     let returnValues;
 
@@ -84,5 +84,12 @@ contract("subscription", function () {
       ).call({from: receiver})
       assert.equal(owed, accured, 'Owned amount returned not equal to expected')
     });
+
+    it('should allow a payor to supply token', async function() {
+      const supply = await Subscription.methods.supply(
+        toWei('100000')
+      ).send({ from: payor })
+      console.log({supply})
+    })
   })
 })
