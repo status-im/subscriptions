@@ -46,9 +46,10 @@ contract Subscription {
         bytes32 agreementId,
         address receiver,
         address payor,
-        uint256 initialDenominationPerSecond,
-        string description,
-        uint256 startDate
+        address token,
+        uint256 annualAmount,
+        uint256 startDate,
+        string description
     );
 
     // Employees start at index 1, to allow us to use employees[0] to check for non-existent address
@@ -145,9 +146,10 @@ contract Subscription {
           agreementId,
           receiver,
           payor,
+          token,
           annualAmount,
-          description,
-          startDate > 0 ? startDate : now
+          startDate > 0 ? startDate : now,
+          description
      );
 
     }
