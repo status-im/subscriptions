@@ -46,27 +46,32 @@ config({
 contract("subscription", function () {
   this.timeout(0);
 
-  it("should create an agreement", async function () {
-    let balance = await web3.eth.getBalance(accounts[8])
-    const args = [
-      receiver,
-      payor,
-      TestToken.address,
-      toWei("100000"),
-      "0",
-      "ipfs/hash"
-    ]
-    const agreementCreation = await Subscription.methods.createAgreement(
-      ...args
-    ).send({ from: payor })
-    const returnValues = agreementCreation.events.AddAgreement.returnValues
-    console.log(Object.keys(agreementCreation.events), returnValues)
-    args.forEach((arg, i) => {
-      const val = returnValues[i+1]
-      if (!addAgreementStartDateIdx) {
-        assert.equal(val, arg, `${val} does not match arg ${arg}`)
-      }
-    })
-  });
+  before(async function() {
+    await TestToken.methods.mint(toWei('1000000')).send({from: payor})
+  })
+
+  describe('createAgreement', function() {
+    it("should create an agreement", async function () {
+      let balance = await web3.eth.getBalance(accounts[8])
+      const args = [
+        receiver,
+        payor,
+        TestToken.address,
+        toWei("100000"),
+        "0",
+        "ipfs/hash"
+      ]
+      const agreementCreation = await Subscription.methods.createAgreement(
+        ...args
+      ).send({ from: payor })
+      const returnValues = agreementCreation.events.AddAgreement.returnValues
+      args.forEach((arg, i) => {
+        const val = returnValues[i+1]
+        if (!addAgreementStartDateIdx) {
+          assert.equal(val, arg, `${val} does not match arg ${arg}`)
+        }
+      })
+    });
+  })
 
   });
