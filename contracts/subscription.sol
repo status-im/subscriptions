@@ -3,17 +3,17 @@ pragma solidity ^0.5.3;
 import "./math/SafeMath.sol";
 import "./math/SafeMath64.sol";
 import "./math/SafeMath8.sol";
+import "./token/ERC20Token.sol";
 
 
 interface CompoundContract {
   function  supply (address asset, uint256 amount) external returns (uint256);
   function withdraw (address asset, uint256 requestedAmount) external returns (uint256);
-  // return supply balance with any accumulated interest for `asset` belonging to `account`
   function getSupplyBalance(address account, address asset) view external returns (uint);
 }
 
 /**
- * @title Payroll in multiple currencies
+ * @title Compound Subscriptions in DAI
  */
 contract Subscription {
     using SafeMath for uint256;
@@ -24,6 +24,7 @@ contract Subscription {
     uint64 internal constant MAX_UINT64 = uint64(-1);
     uint256 internal constant MAX_ACCRUED_VALUE = 2**128;
 
+    ERC20Token public dai;
     address public daiAddress;
     CompoundContract public compound;
 
@@ -33,6 +34,7 @@ contract Subscription {
     )
         public
     {
+      dai = ERC20Token(_daiAddress);
       daiAddress = _daiAddress;
       compound = CompoundContract(_compoundAddress);
     }
@@ -73,29 +75,7 @@ contract Subscription {
       bool terminated;
     }
 
-    /**
-     * @dev Container for customer balance information written to storage.
-     *
-     *      struct Balance {
-     *        principal = customer total balance with accrued interest after applying the customer's most recent balance-changing action
-     *        interestIndex = the total interestIndex as calculated after applying the customer's most recent balance-changing action
-     *      }
-     */
-    struct Balance {
-      uint principal;
-      uint interestIndex;
-    }
-
-    /**
-     * @dev 2-level map: customerAddress -> assetAddress -> balance for payors
-     */
-    mapping(address => mapping(address => Balance)) public payorBalances;
-
-
-    /**
-     * @dev 2-level map: customerAddress -> assetAddress -> balance for receivers
-     */
-    mapping(address => mapping(address => Balance)) public receiverBalances;
+    mapping(address => uint256) public payorBalances;
 
     /**
       * @dev map: keccask256(...args) -> Agreement
@@ -133,6 +113,12 @@ contract Subscription {
       agreements[agreementId].lastPayment = now;
       //dai.transfer(recipient, amount);
       //emit MemberPaid( recipient,  amount, justification);
+    }
+
+    function supply(uint256 amount) public returns (uint256) {
+      uint256 balance = payorBalances[msg.sender];
+        // do transfer
+      payorBalances[msg.sender] = balance.add(amount);
     }
 
     function createAgreement(
