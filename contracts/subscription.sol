@@ -20,6 +20,10 @@ contract Subscription {
     using SafeMath64 for uint64;
     using SafeMath8 for uint8;
 
+    uint128 internal constant ONE = 10 ** 18; // 10^18 is considered 1 in the price feed to allow for decimal calculations
+    uint64 internal constant MAX_UINT64 = uint64(-1);
+    uint256 internal constant MAX_ACCRUED_VALUE = 2**128;
+
     address compoundAddress = 0x3FDA67f7583380E67ef93072294a7fAc882FD7E7;
     address daiAddress = 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359;
     CompoundContract compound = CompoundContract(compoundAddress);
@@ -107,7 +111,8 @@ contract Subscription {
 
     function getAmountOwed(bytes32 agreementId) view public returns (uint256) {
       Agreement memory agreement = agreements[agreementId];
-      return (now - agreement.lastPayment) * agreement.payRate;
+      //TODO check for enddate, use instead of now
+      return (now.sub(agreement.lastPayment)).mul(agreement.payRate);
     }
 
     function withdrawFunds(address recipient, bytes32 agreementId) public {
@@ -141,7 +146,7 @@ contract Subscription {
       agreement.receiver = receiver;
       agreement.payor = payor;
       agreement.token = token;
-      agreement.payRate = annualAmount / 325.25 days;
+      agreement.payRate = annualAmount.div(325.25 days);
       agreement.lastPayment = startDate > 0 ? startDate : now;
       agreement.endDate = MAX_UINT64;
       agreement.description = description;

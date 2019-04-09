@@ -1,4 +1,5 @@
 /*global contract, config, it, assert*/
+const utils = require('../utils/testUtils.js');
 const Subscription = require('Embark/contracts/Subscription');
 const TestToken = require('Embark/contracts/TestToken');
 
@@ -50,28 +51,37 @@ contract("subscription", function () {
     await TestToken.methods.mint(toWei('1000000')).send({from: payor})
   })
 
-  describe('createAgreement', function() {
+  describe('createAgreement and withdraw flow', function() {
+    const annualSalary = toWei("100000")
+    let returnValues;
+
     it("should create an agreement", async function () {
       let balance = await web3.eth.getBalance(accounts[8])
       const args = [
         receiver,
         payor,
         TestToken.address,
-        toWei("100000"),
+        annualSalary,
         "0",
         "ipfs/hash"
       ]
       const agreementCreation = await Subscription.methods.createAgreement(
         ...args
       ).send({ from: payor })
-      const returnValues = agreementCreation.events.AddAgreement.returnValues
-      args.forEach((arg, i) => {
-        const val = returnValues[i+1]
-        if (!addAgreementStartDateIdx) {
+      returnValues = agreementCreation.events.AddAgreement.returnValues
+      args.slice(0,4).forEach((arg, i) => {
+          const val = returnValues[i+1]
           assert.equal(val, arg, `${val} does not match arg ${arg}`)
-        }
       })
     });
-  })
 
-  });
+    it('should get amount owed to receiver', async function() {
+      const accured = '35585162410681240'
+      await utils.increaseTime(10)
+      const owed = await Subscription.methods.getAmountOwed(
+        returnValues.agreementId
+      ).call({from: receiver})
+      assert.equal(owed, accured, 'Owned amount returned not equal to expected')
+    });
+  })
+})

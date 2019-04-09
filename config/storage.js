@@ -37,6 +37,10 @@ module.exports = {
     }
   },
 
+  test: {
+    enabled: false
+  },
+
   // merges with the settings in default
   // used with "embark run privatenet"
   privatenet: {
