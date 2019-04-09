@@ -24,9 +24,18 @@ contract Subscription {
     uint64 internal constant MAX_UINT64 = uint64(-1);
     uint256 internal constant MAX_ACCRUED_VALUE = 2**128;
 
-    address compoundAddress = 0x3FDA67f7583380E67ef93072294a7fAc882FD7E7;
-    address daiAddress = 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359;
-    CompoundContract compound = CompoundContract(compoundAddress);
+    address public daiAddress;
+    CompoundContract public compound;
+
+    constructor(
+        address _compoundAddress,
+        address _daiAddress
+    )
+        public
+    {
+      daiAddress = _daiAddress;
+      compound = CompoundContract(_compoundAddress);
+    }
 
     event AddAgreement(
         bytes32 agreementId,
@@ -93,9 +102,6 @@ contract Subscription {
       */
     mapping(bytes32 => Agreement) agreements;
 
-    constructor() public {
-      nextAgreement = 1;
-    }
 
     /**
      * @notice Do not pay directly into Subscription, please use `supply`.

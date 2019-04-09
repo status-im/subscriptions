@@ -31,11 +31,12 @@ config({
   //},
   contracts: {
     "Subscription": {
-      args: []
+      args: ["0x3FDA67f7583380E67ef93072294a7fAc882FD7E7", "$TestToken"]
     },
     "TestToken": {
       args: []
-    }
+    },
+    "Compound": {}
   }
 }, (_err, web3_accounts) => {
   accounts = web3_accounts
