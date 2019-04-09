@@ -31,7 +31,7 @@ config({
   //},
   contracts: {
     "Subscription": {
-      args: ["0x3FDA67f7583380E67ef93072294a7fAc882FD7E7", "$TestToken"]
+      args: ["$Compound", "$TestToken"]
     },
     "TestToken": {
       args: []
