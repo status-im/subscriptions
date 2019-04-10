@@ -77,19 +77,21 @@ contract("subscription", function () {
     });
 
     it('should get amount owed to receiver', async function() {
-      const accured = '35585162410681240'
+      const accrued = '35585162410681240'
       await utils.increaseTime(10)
       const owed = await Subscription.methods.getAmountOwed(
         returnValues.agreementId
       ).call({from: receiver})
-      assert.equal(owed, accured, 'Owned amount returned not equal to expected')
+      assert.equal(owed, accrued, 'Owned amount returned not equal to expected')
     });
 
     it('should allow a payor to supply token', async function() {
+      const amount = toWei('100000')
       const supply = await Subscription.methods.supply(
-        toWei('100000')
+        amount
       ).send({ from: payor })
-      console.log({supply})
+      const returned = supply.events.SupplyReceived.returnValues
+      assert.equal(amount, returned.amount, 'returned amount does not match')
     })
   })
 })

@@ -49,6 +49,13 @@ contract Subscription {
         string indexed description
     );
 
+    event SupplyReceived(
+        address account,
+        uint256 amount,
+        uint256 startingBalance,
+        uint256 newBalance
+    );
+
     // Employees start at index 1, to allow us to use employees[0] to check for non-existent address
     // mappings with employeeIds
     uint256 public nextAgreement;
@@ -119,8 +126,9 @@ contract Subscription {
       uint256 balance = payorBalances[msg.sender];
       dai.transferFrom(msg.sender, address(this), amount);
       compound.supply(daiAddress, amount);
-      payorBalances[msg.sender] = balance.add(amount);
-      //TODO EMIT EVENT
+      uint256 newBalance = balance.add(amount);
+      payorBalances[msg.sender] = newBalance;
+      emit SupplyReceived(msg.sender, amount, balance, newBalance);
       return 0;
     }
 
