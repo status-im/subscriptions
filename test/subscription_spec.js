@@ -128,5 +128,6 @@ contract("subscription", function () {
 
     //TODO allow payor to withdraw funds and terminate subscription.
     //TODO allow receiver to terminate subscription
+    //TODO allow receiver to deny agreement
   })
 })

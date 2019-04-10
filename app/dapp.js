@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { HashRouter as Router, Route, Link, Switch } from 'react-router-dom';
 import { withStyles } from '@material-ui/core/styles';
-import Divider from '@material-ui/core/Divider';
 
 import EmbarkJS from 'Embark/EmbarkJS';
 import Blockchain from './components/blockchain';
@@ -10,6 +9,7 @@ import Whisper from './components/whisper';
 import Storage from './components/storage';
 import ENS from './components/ens';
 import MainMenu from './components/MainMenu';
+import CreateSubscription from './components/CreateSubscription';
 
 const styles = theme => ({
   root: {
@@ -22,15 +22,6 @@ const styles = theme => ({
     [theme.breakpoints.up('sm')]: {
       margin: '1.75rem 4.5rem'
     }
-  },
-  title: {
-    display: 'grid',
-    fontSize: '10rem',
-    gridColumnStart: '1',
-    gridColumnEnd: '13',
-    gridRowStart: '1',
-    gridRowEnd: '6',
-    textAlign: 'center'
   },
   buttons: {
     display: 'grid',
@@ -49,13 +40,6 @@ const styles = theme => ({
     fontSize: '2rem'
   }
 })
-
-const Title = ({ className }) => (
-  <div className={className}>
-    <div style={{ alignSelf: 'center' }}>Subscriptions</div>
-    <Divider />
-  </div>
-)
 
 class App extends React.Component {
 
@@ -86,10 +70,10 @@ class App extends React.Component {
     const { classes } = this.props;
     return (
       <div className={classes.root}>
-        <Title className={classes.title} />
         <Router className={classes.buttons}>
           <Switch>
             <Route path="/(|main)" component={MainMenu} />
+            <Route path="/(create-subscription)" component={CreateSubscription} />
           </Switch>
         </Router>
       </div>
