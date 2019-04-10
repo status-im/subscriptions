@@ -27,6 +27,9 @@ contract Subscription {
     ERC20Token public dai;
     address public daiAddress;
     CompoundContract public compound;
+    uint256 public totalBalances;
+    uint256 constant base = 10 ** 18;
+    uint256 constant percentBase = 100 * base;
 
     constructor(
         address _compoundAddress,
@@ -53,7 +56,8 @@ contract Subscription {
         address account,
         uint256 amount,
         uint256 startingBalance,
-        uint256 newBalance
+        uint256 newBalance,
+        uint256 totalBalances
     );
 
     // Employees start at index 1, to allow us to use employees[0] to check for non-existent address
@@ -102,23 +106,31 @@ contract Subscription {
     // multiply percentage by totalInterest to get accumulated interest
     // userBalance = totalBalance + accumulatedInterest
 
+    function percentOf(uint256 percent, uint256 target) internal pure returns (uint256) {
+      return target * percent/percentBase;
+    }
+
     function getAmountOwed(bytes32 agreementId) view public returns (uint256) {
       Agreement memory agreement = agreements[agreementId];
       //TODO check for enddate, use instead of now
       return (now.sub(agreement.lastPayment)).mul(agreement.payRate);
     }
 
-    function withdrawFunds(address recipient, bytes32 agreementId) public {
-      // How much are you owed right now?
-      uint amount = getAmountOwed(agreementId);
-      if (amount == 0) return;
+    function withdrawFunds(bytes32 agreementId, uint256 amount) public {
+      uint256 amountOwed = getAmountOwed(agreementId);
+      if (amount == 0 || amountOwed == 0) return;
+      require(amount <= amountOwed, "amount can not exceed amount owed");
+      Agreement storage agreement = agreements[agreementId];
+      uint256 payorBalance = payorBalances[agreement.payor];
+      require(amount <= payorBalance, "amount can not exceed payor balance");
 
-      // Take it out from savings
+      // withdraw from savings to subscription contract
       compound.withdraw(daiAddress, amount);
 
-      // Pay it out
-      agreements[agreementId].lastPayment = now;
-      dai.transfer(recipient, amount);
+      agreement.lastPayment = now;
+      dai.transfer(msg.sender, amount);
+      payorBalances[agreement.payor] = payorBalance.sub(amount);
+      totalBalances = totalBalances.sub(amount);
       //emit MemberPaid( recipient,  amount, justification);
     }
 
@@ -128,7 +140,8 @@ contract Subscription {
       compound.supply(daiAddress, amount);
       uint256 newBalance = balance.add(amount);
       payorBalances[msg.sender] = newBalance;
-      emit SupplyReceived(msg.sender, amount, balance, newBalance);
+      totalBalances = totalBalances.add(amount);
+      emit SupplyReceived(msg.sender, amount, balance, newBalance, totalBalances);
       return 0;
     }
 
@@ -149,12 +162,10 @@ contract Subscription {
       agreement.receiver = receiver;
       agreement.payor = payor;
       agreement.token = token;
-      agreement.payRate = annualAmount.div(325.25 days);
+      agreement.payRate = annualAmount.div(365.25 days);
       agreement.lastPayment = startDate > 0 ? startDate : now;
       agreement.endDate = MAX_UINT64;
       agreement.description = description;
-
-      // TODO should be payor -> receiver mapping
 
       emit AddAgreement(
           agreementId,

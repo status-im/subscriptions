@@ -77,12 +77,12 @@ contract("subscription", function () {
     });
 
     it('should get amount owed to receiver', async function() {
-      const accrued = '35585162410681240'
+      const accrued = 10 * (annualSalary / SECONDS_IN_A_YEAR)
       await utils.increaseTime(10)
       const owed = await Subscription.methods.getAmountOwed(
         returnValues.agreementId
       ).call({from: receiver})
-      assert.equal(owed, accrued, 'Owned amount returned not equal to expected')
+      assert.equal(owed, accrued, `Owned: ${owed} amount returned not equal to expected ${accrued}`)
     });
 
     it('should allow a payor to supply token', async function() {
