@@ -61,19 +61,11 @@ contract Subscription {
         uint256 totalBalances
     );
 
-    // Employees start at index 1, to allow us to use employees[0] to check for non-existent address
-    // mappings with employeeIds
-    uint256 public nextAgreement;
-
-    struct Receiver {
-      address accountAddress; // unique, but can be changed over time
-      mapping(address => uint8) allocation;
-    }
-
-    struct Payor {
-      address accountAddress;
-      mapping(address => uint256) balances;
-    }
+    event WithdrawFunds(
+        address receiver,
+        uint256 amount,
+        bytes32 agreementId
+    );
 
     struct Agreement {
       address receiver;
@@ -124,12 +116,20 @@ contract Subscription {
       return (now.sub(agreement.lastPayment)).mul(agreement.payRate);
     }
 
+    function getTotalOwed(bytes32 agreementId) view public returns (uint256) {
+      uint256 amountOwed = getAmountOwed(agreementId);
+      uint256 interestOwed = getInterestOwed(amountOwed);
+      return interestOwed.add(amountOwed);
+    }
+
     function withdrawFunds(bytes32 agreementId, uint256 amount) public {
       uint256 amountOwed = getAmountOwed(agreementId);
       if (amount == 0 || amountOwed == 0) return;
       require(amount <= amountOwed, "amount can not exceed amount owed");
       Agreement storage agreement = agreements[agreementId];
       uint256 payorBalance = payorBalances[agreement.payor];
+
+      // consider marking subscription terminated in this case
       require(amount <= payorBalance, "amount can not exceed payor balance");
 
       // withdraw from savings to subscription contract
@@ -139,7 +139,7 @@ contract Subscription {
       dai.transfer(msg.sender, amount);
       payorBalances[agreement.payor] = payorBalance.sub(amount);
       totalBalances = totalBalances.sub(amount);
-      //emit MemberPaid( recipient,  amount, justification);
+      emit WithdrawFunds(msg.sender,  amount, agreementId);
     }
 
     function supply(uint256 amount) public returns (uint256) {

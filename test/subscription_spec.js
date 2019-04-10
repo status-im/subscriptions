@@ -52,7 +52,7 @@ contract("subscription", function () {
     await TestToken.methods.mint(toWei('1000000')).send({from: payor})
   })
 
-  describe('createAgreement and  supply withdraw flow', function() {
+  describe('createAgreement and supply withdraw flow', function() {
     const annualSalary = toWei("100000")
     let returnValues;
 
@@ -92,7 +92,11 @@ contract("subscription", function () {
       const owed = await Subscription.methods.getInterestOwed(
         accrued.toString()
       ).call({from: receiver})
+      const totalOwed = await Subscription.methods.getTotalOwed(
+        returnValues.agreementId
+      ).call({from: receiver})
       assert(owed < approxInterest, "The amount owed is higher than expected")
+      assert(Number(totalOwed) >= Number(owed), "totalOwed can not be less than owed")
     })
 
     it('should allow a payor to supply token', async function() {
@@ -103,5 +107,26 @@ contract("subscription", function () {
       const returned = supply.events.SupplyReceived.returnValues
       assert.equal(amount, returned.amount, 'returned amount does not match')
     })
+
+    it('should allow the receiver to withdraw funds accrued', async function() {
+      const accrued = 1000 * 10 * (annualSalary / SECONDS_IN_A_YEAR)
+      const approxInterest = accrued * (0.04 / 12 / 30 / 24)
+      const totalOwed = await Subscription.methods.getTotalOwed(
+        returnValues.agreementId
+      ).call({from: receiver})
+      const withdrawn = await Subscription.methods.withdrawFunds(
+        returnValues.agreementId,
+        totalOwed
+      ).send({ from: receiver })
+      const returned = withdrawn.events.WithdrawFunds
+      assert.equal(Number(returned.returnValues.amount), Number(totalOwed), "withdraw failed or returned amount incorrect")
+      const totalOwed2 = await Subscription.methods.getTotalOwed(
+        returnValues.agreementId
+      ).call({from: receiver})
+      assert.equal(totalOwed2, "0", "Not all funds withdrawn")
+    })
+
+    //TODO allow payor to withdraw funds and terminate subscription.
+    //TODO allow receiver to terminate subscription
   })
 })
