@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { HashRouter as Router, Route, Link, Switch } from 'react-router-dom';
 import { withStyles } from '@material-ui/core/styles';
 import Divider from '@material-ui/core/Divider';
 
@@ -8,6 +9,7 @@ import Blockchain from './components/blockchain';
 import Whisper from './components/whisper';
 import Storage from './components/storage';
 import ENS from './components/ens';
+import MainMenu from './components/MainMenu';
 
 const styles = theme => ({
   root: {
@@ -23,29 +25,21 @@ const styles = theme => ({
   },
   title: {
     display: 'grid',
-    fontSize: '2.5rem',
+    fontSize: '10rem',
     gridColumnStart: '1',
     gridColumnEnd: '13',
     gridRowStart: '1',
     gridRowEnd: '6',
     textAlign: 'center'
   },
-  submissionRoot: {
+  buttons: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(12, [col] 1fr)',
-    gridTemplateRows: 'repeat(5, [row] auto)',
-    gridColumnGap: '1em',
+    fontSize: '2.5rem',
     gridColumnStart: '1',
     gridColumnEnd: '13',
-    gridRowGap: '2ch',
-  },
-  formControl: {
-    gridColumnStart: '6'
-  },
-  formButton: {
-    gridColumnStart: '1',
-    gridColumnEnd: '13',
-    height: '50px'
+    gridRowStart: '1',
+    gridRowEnd: '6',
+    textAlign: 'center'
   },
   textField: {
     gridColumnStart: '1',
@@ -93,11 +87,15 @@ class App extends React.Component {
     return (
       <div className={classes.root}>
         <Title className={classes.title} />
+        <Router className={classes.buttons}>
+          <Switch>
+            <Route path="/(|main)" component={MainMenu} />
+          </Switch>
+        </Router>
       </div>
     );
   }
 }
 
 const StyledApp = withStyles(styles)(App)
-
 ReactDOM.render(<StyledApp />, document.getElementById('app'));
