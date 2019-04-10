@@ -85,6 +85,16 @@ contract("subscription", function () {
       assert.equal(owed, accrued, `Owned: ${owed} amount returned not equal to expected ${accrued}`)
     });
 
+    it('should get interest owed from compound', async function() {
+      const accrued = 1000 * 10 * (annualSalary / SECONDS_IN_A_YEAR)
+      const approxInterest = accrued * (0.04 / 12 / 30 / 24)
+      await utils.increaseTime(1000)
+      const owed = await Subscription.methods.getInterestOwed(
+        accrued.toString()
+      ).call({from: receiver})
+      assert(owed < approxInterest, "The amount owed is higher than expected")
+    })
+
     it('should allow a payor to supply token', async function() {
       const amount = toWei('100000')
       const supply = await Subscription.methods.supply(

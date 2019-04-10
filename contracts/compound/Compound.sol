@@ -2,7 +2,7 @@ pragma solidity ^0.5.3;
 import "../token/ERC20Token.sol";
 
 
-
+// DO NOT USE IN PRODUCTION
 // Contract to mock interactions with Compound.finance
 
 contract Compound {
@@ -35,7 +35,7 @@ contract Compound {
     uint supplyTime = supplyTimes[msg.sender];
     uint balance = supplyBalances[msg.sender];
     uint timeDelta = now - supplyTime;
-    uint accruedInterest = timeDelta * periodicRate;
+    uint accruedInterest = balance * timeDelta * periodicRate / percentBase;
     return accruedInterest + balance;
   }
 }

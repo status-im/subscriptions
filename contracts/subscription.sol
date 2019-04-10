@@ -30,6 +30,7 @@ contract Subscription {
     uint256 public totalBalances;
     uint256 constant base = 10 ** 18;
     uint256 constant percentBase = 100 * base;
+    uint256 public minDeposit = 12;
 
     constructor(
         address _compoundAddress,
@@ -110,6 +111,13 @@ contract Subscription {
       return target * percent/percentBase;
     }
 
+    function getInterestOwed(uint256 amountOwed) view public returns (uint256) {
+      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
+      uint256 totalInterest = totalAmount - totalBalances;
+      uint256 interestOwed = totalInterest * amountOwed / totalBalances;
+      return interestOwed;
+    }
+
     function getAmountOwed(bytes32 agreementId) view public returns (uint256) {
       Agreement memory agreement = agreements[agreementId];
       //TODO check for enddate, use instead of now
@@ -156,7 +164,10 @@ contract Subscription {
       external
     {
       require(msg.sender == payor, "Agreement must be created by payor");
+      require(annualAmount > 0, "AnnualAmount can not be zero");
       bytes32 agreementId = keccak256(abi.encode(receiver, payor, token, annualAmount, startDate, description));
+      uint supplyAmount = annualAmount / minDeposit;
+      supply(supplyAmount);
       Agreement storage agreement = agreements[agreementId];
 
       agreement.receiver = receiver;
