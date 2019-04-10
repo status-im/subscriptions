@@ -1,7 +1,8 @@
 import React from 'react';
 import Button from '@material-ui/core/Button';
 import { Formik } from 'formik'
-import Subscription from 'Embark/contracts/Subscription'
+import Subscription from 'Embark/contracts/Subscription';
+import {default as DAI} from 'Embark/contracts/TestToken';
 import TextField from '@material-ui/core/TextField'
 import { withStyles } from '@material-ui/core/styles';
 import Divider from '@material-ui/core/Divider';
@@ -74,7 +75,18 @@ function CreateSubscription({ classes, history }) {
         description: '',
       }}
       onSubmit={async (values, { resetForm }) => {
-        console.log({values,Subscription})
+        console.log({values,Subscription, DAI})
+        {/* const args = [
+            receiver,
+            payor,
+            TestToken.address,
+            annualSalary,
+            "0",
+            "ipfs/hash"
+            ] */}
+
+        const payor = web3.eth.getCoinbase();
+        //Subscription.methods.createAgreement
       }}
     >
       {({
