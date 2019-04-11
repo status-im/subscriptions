@@ -66,6 +66,7 @@ contract("subscription", function () {
         "0",
         "ipfs/hash"
       ]
+      const approval = await TestToken.methods.approve(Subscription.address, toWei("1000000")).send({from: payor})
       const agreementCreation = await Subscription.methods.createAgreement(
         ...args
       ).send({ from: payor })

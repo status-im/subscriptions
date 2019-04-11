@@ -144,7 +144,8 @@ contract Subscription {
 
     function supply(uint256 amount) public returns (uint256) {
       uint256 balance = payorBalances[msg.sender];
-      dai.transferFrom(msg.sender, address(this), amount);
+      require(dai.transferFrom(msg.sender, address(this), amount), "Error transfering DAI");
+      //dai.transferFrom(msg.sender, address(this), amount);
       compound.supply(daiAddress, amount);
       uint256 newBalance = balance.add(amount);
       payorBalances[msg.sender] = newBalance;

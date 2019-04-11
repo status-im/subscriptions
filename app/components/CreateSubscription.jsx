@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '@material-ui/core/Button';
 import { Formik } from 'formik'
 import Subscription from 'Embark/contracts/Subscription';
@@ -7,6 +7,7 @@ import TextField from '@material-ui/core/TextField'
 import { withStyles } from '@material-ui/core/styles';
 import Divider from '@material-ui/core/Divider';
 
+const { createAgreement } = Subscription.methods;
 
 const styles = theme => ({
   root: {
@@ -66,7 +67,30 @@ const Title = ({ className }) => (
   </div>
 )
 
+async function checkAndSetAllowance(setAllowance) {
+  const payor = await web3.eth.getCoinbase()
+  const approved = await DAI.methods.allowance(payor, Subscription.address).call()
+  setAllowance(approved)
+}
+
+async function approveTransfers(setAllowance) {
+  const payor = await web3.eth.getCoinbase()
+  const balance = await DAI.methods.balanceOf(payor).call()
+  DAI
+    .methods
+    .approve(Subscription.address, balance).send()
+    .then(res => { setAllowance(balance)})
+    .catch(console.log)
+}
+
 function CreateSubscription({ classes, history }) {
+  const [allowance, setAllowance] = useState(0)
+
+  useEffect(() => {
+    checkAndSetAllowance(setAllowance)
+  }, [])
+  console.log({allowance}, !!Number(allowance))
+
   return (
     <Formik
       initialValues={{
@@ -75,18 +99,31 @@ function CreateSubscription({ classes, history }) {
         description: '',
       }}
       onSubmit={async (values, { resetForm }) => {
-        console.log({values,Subscription, DAI})
-        {/* const args = [
-            receiver,
-            payor,
-            TestToken.address,
-            annualSalary,
-            "0",
-            "ipfs/hash"
-            ] */}
-
-        const payor = web3.eth.getCoinbase();
-        //Subscription.methods.createAgreement
+        console.log({values,Subscription, DAI}, DAI.address)
+        const { receiver, amount, description } = values
+        // Start immediately
+        const startDate = "0"
+        const payor = await web3.eth.getCoinbase()
+        const approved = await DAI.methods.allowance(payor, Subscription.address).call()
+        const args = [
+          receiver,
+          payor,
+          DAI.address,
+          web3.utils.toWei(amount),
+          startDate,
+          description
+        ]
+        console.log({args, approved})
+        createAgreement(...args)
+               .send()
+               .then(res => {
+                 console.log({res})
+                 resetForm()
+               })
+               .catch(err => {
+                 console.log({err})
+                 resetForm()
+               })
       }}
     >
       {({
@@ -155,7 +192,9 @@ function CreateSubscription({ classes, history }) {
               onBlur={handleBlur}
               value={values.description || ''}
             />
-            <Button type="submit" color="primary" variant="contained" className={classes.formButton}>{isSubmitting ? 'Ethereum Submission In Progress' : 'Create Subscription'}</Button>
+            {!!Number(allowance)
+            ? <Button type="submit" color="primary" variant="contained" className={classes.formButton}>{isSubmitting ? 'Ethereum Submission In Progress' : 'Create Subscription'}</Button>
+            : <Button color="secondary" variant="contained" className={classes.formButton} onClick={()=> { approveTransfers(setAllowance)}}>Grant DAI Transfer Permissions</Button>}
           </form>
         )
       }
