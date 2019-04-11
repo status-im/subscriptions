@@ -57,6 +57,10 @@ const styles = theme => ({
   typography: {
     fontSize: '1rem'
   },
+  accrued: {
+    fontSize: '1rem',
+    fontWeight: 'bold'
+  },
   textInput: {
     fontSize: '2rem'
   }
@@ -78,11 +82,24 @@ async function enrichAgreement(agreement) {
 const formatAmount = amt => amt ? web3.utils.fromWei(amt) : 0
 const formatDate = date => new Date(Number(date)*1000);
 const secondsDelta = (d1) => Math.abs((d1.getTime() - new Date().getTime()) / 1000);
+const secondsInYear = 86400 * 365.25
+const computeInterest = (annualSalary, elapsedTime, interestRate) => {
+  // http://financeformulas.net/Future-Value-of-Annuity-Continuous-Compounding.html
+  const salaryPerSecond = annualSalary / secondsInYear
+  const intPerSecond = interestRate / (secondsInYear / elapsedTime)
+  let E = Math.E
+  const accruedInterest = salaryPerSecond * (E ** (intPerSecond * (elapsedTime / secondsInYear)) - 1) / (E ** intPerSecond - 1)
+  return Math.round(accruedInterest)
+}
+const computeAndSetAccruedInterest = (annualAmount, startDate, interestRate, setState) => {
+  const ellapsedTime = secondsDelta(formatDate(startDate))
+  const accrued = computeInterest(annualAmount, ellapsedTime, interestRate)
+  setState(accrued)
+}
 const computeAccrued = (annualAmt, secondsEllapsed) => {
-  const secondsInYear = 86400 * 365.25
   const amtPerSecond = annualAmt / secondsInYear
   const amount = amtPerSecond * secondsEllapsed
-  return amount
+  return Math.round(amount)
 }
 
 const computeAndSetAccrued = (annualAmount, startDate, setState) => {
@@ -93,9 +110,12 @@ const computeAndSetAccrued = (annualAmount, startDate, setState) => {
 const SubscriptionInfo = ({ agreement, classes }) => {
   const { annualAmount, startDate } = agreement
   const [accrued, setAccrued] = useState(0)
+  const [accruedInterest, setAccruedInterest] = useState(0)
+  const interestRate = 0.04
   useEffect(
     () => {
       let timer1 = setInterval(() => computeAndSetAccrued(annualAmount, startDate, setAccrued), 1000)
+      let timer2 = setInterval(() => computeAndSetAccruedInterest(annualAmount, startDate, interestRate, setAccruedInterest))
       return () => {
         clearTimeout(timer1)
       }
@@ -130,8 +150,14 @@ const SubscriptionInfo = ({ agreement, classes }) => {
         <Typography className={classes.typography} gutterBottom>
           Accrued Amount
         </Typography>
-        <Typography className={classes.typography} gutterBottom color="textSecondary">
+        <Typography className={classes.accrued} gutterBottom>
           {`${Number(formatAmount(accrued.toString())).toLocaleString(undefined, {minimumFractionDigits: 5})} DAI`}
+        </Typography>
+        <Typography className={classes.typography} gutterBottom>
+          Accrued Interest Earned
+        </Typography>
+        <Typography className={classes.accrued} gutterBottom>
+          {`${Number(formatAmount(accruedInterest.toString())).toLocaleString(undefined, {minimumFractionDigits: 10})} DAI`}
         </Typography>
       </CardContent>
       <CardActions>
