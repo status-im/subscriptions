@@ -61,7 +61,9 @@ function MainMenu({ classes, history }) {
       <Link to={`/create-subscription`} className={classes.link}>
         <Button type="submit" color="primary" variant="contained" className={classes.button}>Create Subscription</Button>
       </Link>
-        <Button type="submit" color="secondary" variant="contained" className={classes.button}>Manage Subscription</Button>
+      <Link to={`/view-subscriptions`} className={classes.link}>
+        <Button type="submit" color="secondary" variant="contained" className={classes.button}>Your Subscribers</Button>
+      </Link>
     </div>
   )
 }

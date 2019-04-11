@@ -115,9 +115,10 @@ const SubscriptionInfo = ({ agreement, classes }) => {
   useEffect(
     () => {
       let timer1 = setInterval(() => computeAndSetAccrued(annualAmount, startDate, setAccrued), 1000)
-      let timer2 = setInterval(() => computeAndSetAccruedInterest(annualAmount, startDate, interestRate, setAccruedInterest))
+      let timer2 = setInterval(() => computeAndSetAccruedInterest(annualAmount, startDate, interestRate, setAccruedInterest), 1000)
       return () => {
         clearTimeout(timer1)
+        clearTimeout(timer2)
       }
     }, [])
   return (
