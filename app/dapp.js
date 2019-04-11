@@ -10,6 +10,7 @@ import Storage from './components/storage';
 import ENS from './components/ens';
 import MainMenu from './components/MainMenu';
 import CreateSubscription from './components/CreateSubscription';
+import ViewSubscriptions from './components/ViewSubscriptions';
 
 const styles = theme => ({
   root: {
@@ -74,6 +75,7 @@ class App extends React.Component {
           <Switch>
             <Route path="/(|main)" component={MainMenu} />
             <Route path="/(create-subscription)" component={CreateSubscription} />
+            <Route path="/(view-subscriptions)" component={ViewSubscriptions} />
           </Switch>
         </Router>
       </div>
