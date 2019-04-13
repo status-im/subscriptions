@@ -9,6 +9,17 @@ import Divider from '@material-ui/core/Divider';
 
 const { createAgreement } = Subscription.methods;
 
+const validate = async (values) => {
+  const { amount } = values
+  let errors = {}
+  const formattedAmount = web3.utils.toWei(amount)
+  const payor = await web3.eth.getCoinbase()
+  const balance = await DAI.methods.balanceOf(payor).call()
+  const validAmount = BigInt(formattedAmount) <= BigInt(balance)
+  if (!validAmount) errors.amount = 'Insufficient amount of DAI in account'
+  if (Object.keys(errors).length) throw errors
+}
+
 const styles = theme => ({
   root: {
     display: 'grid',
@@ -98,6 +109,7 @@ function CreateSubscription({ classes, history }) {
         amount: '',
         description: '',
       }}
+      validate={validate}
       onSubmit={async (values, { resetForm }) => {
         console.log({values,Subscription, DAI}, DAI.address)
         const { receiver, amount, description } = values
@@ -160,6 +172,7 @@ function CreateSubscription({ classes, history }) {
             />
             <TextField
               className={classes.textField}
+              error={!!errors.amount}
               InputProps={{
                 classes: {
                   input: classes.textInput
@@ -167,7 +180,7 @@ function CreateSubscription({ classes, history }) {
               }}
               id="amount"
               name="amount"
-              label="The annual amount you will be paying in DAI"
+              label={errors.amount ? "Insufficient Balance" : "The annual amount you will be paying in DAI"}
               placeholder="The annual amount you will be paying in DAI"
               margin="normal"
               variant="outlined"
