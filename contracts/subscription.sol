@@ -106,7 +106,9 @@ contract Subscription {
     function getInterestOwed(uint256 amountOwed) view public returns (uint256) {
       uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
       uint256 totalInterest = totalAmount - totalBalances;
-      uint256 interestOwed = totalInterest * amountOwed / totalBalances;
+      if (amountOwed == totalBalances) return totalInterest;
+      uint256 totalOwned = totalInterest * amountOwed;
+      uint256 interestOwed = totalOwned.div(totalBalances);
       return interestOwed;
     }
 
