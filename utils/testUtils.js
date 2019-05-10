@@ -1,32 +1,21 @@
 exports.increaseTime = async (amount) => {
   return new Promise(function(resolve, reject) {
-    web3.currentProvider.send(
+    const sendMethod = (web3.currentProvider.sendAsync) ? web3.currentProvider.sendAsync.bind(web3.currentProvider) : web3.currentProvider.send.bind(web3.currentProvider);
+    sendMethod(
       {
         jsonrpc: '2.0',
         method: 'evm_increaseTime',
-        params: [+amount],
+        params: [Number(amount)],
         id: new Date().getSeconds()
       },
-      async (error) => {
+      (error) => {
+        console.log('Finsihed the first', error);
         if (error) {
           console.log(error);
-          return reject(err);
+          return reject(error);
         }
-        await web3.currentProvider.send(
-          {
-            jsonrpc: '2.0',
-            method: 'evm_mine',
-            params: [],
-            id: new Date().getSeconds()
-          }, (error) => {
-            if (error) {
-              console.log(error);
-              return reject(err);
-            }
-            resolve();
-          }
-        )
+        resolve();
       }
-    )
+    );
   });
-}
+};
