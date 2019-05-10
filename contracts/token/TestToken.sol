@@ -1,4 +1,4 @@
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.7;
 
 import "./StandardToken.sol";
 import "./ApproveAndCallFallBack.sol";

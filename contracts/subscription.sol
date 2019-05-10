@@ -1,4 +1,5 @@
-pragma solidity ^0.5.3;
+pragma solidity ^0.5.7;
+pragma experimental ABIEncoderV2;
 
 import "./math/SafeMath.sol";
 import "./math/SafeMath64.sol";
@@ -13,7 +14,7 @@ interface CompoundContract {
 }
 
 /**
- * @title Compound Subscriptions in DAI
+ * @title Subscriptions in DAI
  */
 contract Subscription {
     using SafeMath for uint256;
@@ -110,6 +111,29 @@ contract Subscription {
       uint256 totalOwned = totalInterest * amountOwed;
       uint256 interestOwed = totalOwned.div(totalBalances);
       return interestOwed;
+    }
+
+    function getAnnuityDue(bytes32 agreementId) view public returns (uint256) {
+      Agreement memory agreement = agreements[agreementId];
+      uint256 lastPayment = agreement.lastPayment;
+      uint256 periodic = agreement.payRate;
+
+
+      // can be generalized getEffectiveRate
+      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
+      uint256 totalInterest = totalAmount - totalBalances;
+
+      //effectiveRate may have to be a fraction - totalInterest < totalBalances
+      uint256 effectiveRate = totalInterest / totalBalances;
+
+      uint256 periods = now - lastPayment;
+      // fraction division
+      uint256 periodicRate = effectiveRate / periods;
+      // FV annuity due
+      uint256 numerator = (1 + periodicRate)**periods - 1;
+      uint256 reduced = numerator / periodicRate;
+      uint256 annuityDue = (1 + periodicRate) * periodic * reduced;
+      return totalInterest;
     }
 
     function getAmountOwed(bytes32 agreementId) view public returns (uint256) {

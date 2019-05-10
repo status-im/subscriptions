@@ -43,10 +43,6 @@ module.exports = {
     //strategy: 'implicit',
 
     contracts: {
-      SimpleStorage: {
-        fromIndex: 0,
-        args: [100]
-      },
       "Subscription": {
         args: ["$Compound", "$TestToken"]
       }

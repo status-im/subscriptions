@@ -1,5 +1,6 @@
 /*global contract, config, it, assert*/
 const utils = require('../utils/testUtils.js');
+const finance = require('../utils/finance.js');
 const Subscription = require('Embark/contracts/Subscription');
 const TestToken = require('Embark/contracts/TestToken');
 
@@ -87,15 +88,19 @@ contract("subscription", function () {
     });
 
     it('should get interest owed from compound', async function() {
-      const accrued = 1000 * 10 * (annualSalary / SECONDS_IN_A_YEAR)
-      const approxInterest = accrued * (0.04 / 12 / 30 / 24)
+      const { computeInterest } = finance;
+      const elapsedTime = 1000 * 10;
+      const accrued = elapsedTime * (annualSalary / SECONDS_IN_A_YEAR)
+      const approxInterest = accrued * (0.04 / SECONDS_IN_A_YEAR)
+      const compoundedInterest = computeInterest(annualSalary, elapsedTime, 0.04)
       await utils.increaseTime(1000)
-      const owed = await Subscription.methods.getInterestOwed(
-        accrued.toString()
+      const owed = await Subscription.methods.getAnnuityDue(
+        returnValues.agreementId
       ).call({from: receiver})
       const totalOwed = await Subscription.methods.getTotalOwed(
         returnValues.agreementId
       ).call({from: receiver})
+      console.log({approxInterest, compoundedInterest, owed, totalOwed}, approxInterest - compoundedInterest)
       assert(owed < approxInterest, "The amount owed is higher than expected")
       assert(Number(totalOwed) >= Number(owed), "totalOwed can not be less than owed")
     })

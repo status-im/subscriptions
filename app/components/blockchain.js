@@ -1,5 +1,4 @@
 import EmbarkJS from 'Embark/EmbarkJS';
-import SimpleStorage from 'Embark/contracts/SimpleStorage';
 import React from 'react';
 import { Form, FormGroup, FormControl, HelpBlock, Button } from 'react-bootstrap';
 
@@ -32,14 +31,12 @@ class Blockchain extends React.Component {
 
     var value = parseInt(this.state.valueSet, 10);
 
-    SimpleStorage.methods.set(value).send();
     this._addToLog("SimpleStorage.methods.set(value).send()");
   }
 
   getValue(e) {
     e.preventDefault();
 
-    SimpleStorage.methods.get().call().then(_value => this.setState({ valueGet: _value }));
     this._addToLog("SimpleStorage.methods.get(console.log)");
   }
 
