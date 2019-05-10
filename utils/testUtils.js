@@ -1,6 +1,6 @@
 exports.increaseTime = async (amount) => {
   return new Promise(function(resolve, reject) {
-    web3.currentProvider.sendAsync(
+    web3.currentProvider.send(
       {
         jsonrpc: '2.0',
         method: 'evm_increaseTime',
@@ -12,7 +12,7 @@ exports.increaseTime = async (amount) => {
           console.log(error);
           return reject(err);
         }
-        await web3.currentProvider.sendAsync(
+        await web3.currentProvider.send(
           {
             jsonrpc: '2.0',
             method: 'evm_mine',
