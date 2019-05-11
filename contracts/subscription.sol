@@ -5,10 +5,13 @@ import "./math/SafeMath.sol";
 import "./math/SafeMath64.sol";
 import "./math/SafeMath8.sol";
 import "./token/ERC20Token.sol";
+import { Decimal } from "./math/Decimal.sol";
+import { Fraction } from "./math/Fraction.sol";
+import { FractionMath } from "./math/FractionMath.sol";
 
 
 interface CompoundContract {
-  function  supply (address asset, uint256 amount) external returns (uint256);
+  function supply (address asset, uint256 amount) external returns (uint256);
   function withdraw (address asset, uint256 requestedAmount) external returns (uint256);
   function getSupplyBalance(address account, address asset) view external returns (uint);
 }
@@ -135,6 +138,74 @@ contract Subscription {
       uint256 annuityDue = (1 + periodicRate) * periodic * reduced;
       return totalInterest;
     }
+
+    function getAnnuity(bytes32 agreementId) view public returns (uint256) {
+      Agreement memory agreement = agreements[agreementId];
+      uint256 lastPayment = agreement.lastPayment;
+      uint256 periodic = agreement.payRate;
+
+      // can be generalized getEffectiveRate
+      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
+      uint256 totalInterest = totalAmount - totalBalances;
+      uint256 effectiveRate = Decimal.div(
+                                 totalInterest,
+                                 Decimal.D256({ value: totalBalances})
+                              );
+      uint256 periods = now - lastPayment;
+      uint256 periodicRate = Decimal.div(
+                                effectiveRate,
+                                Decimal.D256({ value: periods })
+                             );
+      uint256 numerator = (1 + periodicRate)**periods - 1;
+      uint256 reduced = numerator / periodicRate;
+      uint256 annuityDue = (1 + periodicRate) * periodic * reduced;
+      return reduced;
+    }
+
+    function getAnnuityFrac(bytes32 agreementId) view public returns (uint128) {
+      Agreement memory agreement = agreements[agreementId];
+      uint256 lastPayment = agreement.lastPayment;
+      uint256 periodic = agreement.payRate;
+
+      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
+      uint256 totalInterest = totalAmount - totalBalances;
+      Fraction.Fraction128 memory effectiveRate = FractionMath.bound(
+                                     totalInterest,
+                                     totalBalances
+                                  );
+      uint128 periods = uint128(now - lastPayment);
+      Fraction.Fraction128 memory periodicRate = FractionMath.divUint(
+                                effectiveRate,
+                                periods
+                             );
+      Fraction.Fraction128 memory onePlusPeriodic = FractionMath.add(
+                                                        Fraction.one(),
+                                                        periodicRate
+                                                    );
+      Fraction.Fraction128 memory raisedToPeriods = FractionMath.exp(
+                                                        onePlusPeriodic,
+                                                        periods
+                                                    );
+
+      Fraction.Fraction128 memory numerator = FractionMath.sub(
+                                                  raisedToPeriods,
+                                                  Fraction.one()
+                                              );
+      Fraction.Fraction128 memory reduced = FractionMath.div(
+                                                numerator,
+                                                periodicRate
+                                            );
+      Fraction.Fraction128 memory reducedTimes = FractionMath.mul(
+                                                     onePlusPeriodic,
+                                                     reduced
+                                                 );
+      Fraction.Fraction128 memory annuityDue = FractionMath.mul(
+                                                  reducedTimes,
+                                                  FractionMath.bound(periodic, uint256(1))
+                                               );
+      return annuityDue.num / annuityDue.den;
+   }
+
 
     function getAmountOwed(bytes32 agreementId) view public returns (uint256) {
       Agreement memory agreement = agreements[agreementId];
