@@ -189,16 +189,16 @@ library FractionMath {
      */
     function exp(
                  Fraction.Fraction128 memory a,
-                 uint256 b
-                 )
+                 uint128 b
+    )
       internal
       pure
       returns (Fraction.Fraction128 memory)
     {
-      return bound(
-                a.num**b,
-                a.den**b
-             );
+      return Fraction.Fraction128({
+                num: a.num**b,
+                den: a.den**b
+            });
     }
 
 
@@ -234,6 +234,49 @@ library FractionMath {
             num: uint128(num),
             den: uint128(den)
         });
+    }
+
+    /**
+     * Returns the greatest common divisor of a fraction.
+     *
+     * @param  fraction Fraction128
+     * @return The greatest common divisor
+     */
+    function greatestCommonDivisor(
+       Fraction.Fraction128 memory fraction
+    )
+      internal
+      pure
+      returns (uint128)
+    {
+      uint128 num = fraction.num;
+      uint128 den = fraction.den;
+      while(den > 0) {
+        uint128 temp = num;
+        num = den;
+        den = temp % den;
+      }
+      return num;
+    }
+
+    /**
+     * Returns a reduced fraction using the Euclidean algorithm
+     *
+     * @param  fraction Fraction128 to be reduced
+     * @return reduced Fraction128
+     */
+    function reduceFraction(
+       Fraction.Fraction128 memory fraction
+    )
+      internal
+      pure
+      returns (Fraction.Fraction128 memory)
+    {
+      uint128 gcd = greatestCommonDivisor(fraction);
+      return Fraction.Fraction128({
+                num: fraction.num / gcd,
+                den: fraction.den / gcd
+            });
     }
 
     /**
