@@ -22,6 +22,13 @@ function getSalary(salary) {
 
 const toWei = amt => web3.utils.toWei(amt, 'ether');
 
+const annuityDue = (P, R, T) => {
+  const e = Math.E
+  const num = e**(R*T) - 1
+  const den = e**R - 1
+  return P * (num/den)
+}
+
 // For documentation please see https://embark.status.im/docs/contracts_testing.html
 config({
   //deployment: {
@@ -87,22 +94,37 @@ contract("subscription", function () {
       assert.equal(owed, accrued, `Owned: ${owed} amount returned not equal to expected ${accrued}`)
     });
 
-    it('should get interest owed from compound', async function() {
+    it('should compute annuity due correctly',  async function() {
+      const owedWithInterest = await Subscription.methods.getAnnuityDueWrapper(
+        toWei('1000'),
+        '1',
+        '12'
+      ).call({from: receiver})
+
+      const localOwed = annuityDue(1000, 0.01, 12);
+      const truncated = Math.trunc(owedWithInterest * 1e-18)
+      assert(Math.trunc(owedWithInterest * 1e-18) == Math.trunc(localOwed), `OwedWihInterest of ${truncated} does not match locally computed of ${Math.trunc(localOwed)}`)
+    })
+
+    it('should get correct amount owed to payee from agreementId', async function() {
       const { computeInterest } = finance;
-      const elapsedTime = 1000 * 10;
-      const accrued = elapsedTime * (annualSalary / SECONDS_IN_A_YEAR)
-      const approxInterest = accrued * (0.04 / SECONDS_IN_A_YEAR)
-      const compoundedInterest = computeInterest(annualSalary, elapsedTime, 0.04)
-      await utils.increaseTime(1000)
-      const owed = await Subscription.methods.getAnnuityDue(
+      const elapsedTime = SECONDS_IN_A_YEAR + 10;
+      const payPerSecond = annualSalary / elapsedTime;
+      const rate = 0.04 / SECONDS_IN_A_YEAR;
+      const accrued = elapsedTime * payPerSecond;
+      await utils.increaseTime(SECONDS_IN_A_YEAR)
+      const agreement = await Subscription.methods.getAgreement(
+        returnValues.agreementId
+      ).call()
+
+      const computedAnnuityDue = annuityDue(payPerSecond, rate, elapsedTime)
+      const owed = await Subscription.methods.getOwedPayee(
         returnValues.agreementId
       ).call({from: receiver})
-      const totalOwed = await Subscription.methods.getTotalOwed(
-        returnValues.agreementId
-      ).call({from: receiver})
-      console.log({approxInterest, compoundedInterest, owed, totalOwed}, approxInterest - compoundedInterest)
-      assert(owed < approxInterest, "The amount owed is higher than expected")
-      assert(Number(totalOwed) >= Number(owed), "totalOwed can not be less than owed")
+
+      const truncAnnuityDue = Math.trunc(computedAnnuityDue * 1e-18);
+      const truncOwed = Math.trunc(owed * 1e-18);
+      assert(truncAnnuityDue == truncOwed, 'Amount owed does not equal locally computed value')
     })
 
     it('should allow a payor to supply token', async function() {

@@ -20,6 +20,7 @@ pragma solidity 0.5.7;
 
 import { SafeMath } from "./SafeMath.sol";
 import { Fraction } from "./Fraction.sol";
+import { MathHelpers } from "./MathHelpers.sol";
 
 
 /**
@@ -62,8 +63,8 @@ library FractionMath {
     }
 
     function sub(
-                 Fraction.Fraction128 memory a,
-                 Fraction.Fraction128 memory b
+        Fraction.Fraction128 memory a,
+        Fraction.Fraction128 memory b
     )
       internal
       pure
@@ -146,9 +147,9 @@ library FractionMath {
      * @return    The result (quotient)
      */
     function div(
-                 Fraction.Fraction128 memory a,
-                 Fraction.Fraction128 memory b
-                 )
+        Fraction.Fraction128 memory a,
+        Fraction.Fraction128 memory b
+    )
       internal
       pure
       returns (Fraction.Fraction128 memory)
@@ -265,7 +266,7 @@ library FractionMath {
      * @param  fraction Fraction128 to be reduced
      * @return reduced Fraction128
      */
-    function reduceFraction(
+    function reduce(
        Fraction.Fraction128 memory fraction
     )
       internal
@@ -310,5 +311,48 @@ library FractionMath {
         pure
     {
         assert(a.den != 0); // coverage-enable-line
+    }
+
+    /**
+     * Returns n * f, trying to prevent overflow as much as possible. Assumes that the numerator
+     * and denominator of f are less than 2**128.
+     */
+    function safeMultiplyUint256ByFraction(
+        uint256 n,
+        Fraction.Fraction128 memory f
+    )
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 term1 = n.div(2 ** 128); // first 128 bits
+        uint256 term2 = n % (2 ** 128); // second 128 bits
+
+        // uncommon scenario, requires n >= 2**128. calculates term1 = term1 * f
+        if (term1 > 0) {
+            term1 = term1.mul(f.num);
+            uint256 numBits = MathHelpers.getNumBits(term1);
+
+            // reduce rounding error by shifting all the way to the left before dividing
+            term1 = MathHelpers.divisionRoundedUp(
+                term1 << (uint256(256).sub(numBits)),
+                f.den);
+
+            // continue shifting or reduce shifting to get the right number
+            if (numBits > 128) {
+                term1 = term1 << (numBits.sub(128));
+            } else if (numBits < 128) {
+                term1 = term1 >> (uint256(128).sub(numBits));
+            }
+        }
+
+        // calculates term2 = term2 * f
+        term2 = MathHelpers.getPartialAmountRoundedUp(
+            f.num,
+            f.den,
+            term2
+        );
+
+        return term1.add(term2);
     }
 }
