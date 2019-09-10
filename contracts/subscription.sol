@@ -107,18 +107,26 @@ contract Subscription {
       return interestOwed;
    }
 
-    function getOwedPayee(bytes32 agreementId)
+    function getOwedById(bytes32 agreementId)
       view
       public
       returns (int256)
     {
       Agreement memory agreement = agreements[agreementId];
+      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
+      uint256 periods = now - agreement.lastPayment;
+      return getOwedPayee(agreement, totalAmount, totalBalances, periods);
+    }
+
+    function getOwedPayee(Agreement memory agreement, uint totalAmount, uint totalBalances, uint periods)
+      pure
+      public
+      returns (int256)
+    {
       uint256 lastPayment = agreement.lastPayment;
       uint256 periodic = agreement.payRate;
-      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
       uint256 totalInterest = totalAmount - totalBalances;
-      uint256 periods = now - lastPayment;
-      bytes16 periodicRate = computePeriodicRate(totalInterest, periods);
+      bytes16 periodicRate = computePeriodicRate(totalInterest, periods, totalBalances);
       return getAnnuityDueQuad(periodic.toBytes(), periodicRate, periods.toBytes());
     }
 
@@ -145,9 +153,9 @@ contract Subscription {
       return getAnnuityDueQuad(periodicPayment.toBytes(), interestRate, elapsedTime.toBytes());
     }
 
-    function computePeriodicRate(uint totalInterest, uint elapsedTime)
+    function computePeriodicRate(uint totalInterest, uint elapsedTime, uint totalBalances)
       public
-      view
+      pure
       returns (bytes16)
     {
       bytes16 interest = totalInterest.toBytes();
@@ -173,27 +181,29 @@ contract Subscription {
       return interestOwed.add(amountOwed);
     }
 
-    function withdrawFunds(bytes32 agreementId, uint256 amount) public {
-      uint256 amountOwed = getAmountOwed(agreementId);
-      if (amount == 0 || amountOwed == 0) return;
-      require(amount <= amountOwed, "amount can not exceed amount owed");
+    function withdrawFundsPayee(bytes32 agreementId) public {
       Agreement storage agreement = agreements[agreementId];
+      require(msg.sender == agreement.receiver, "caller is not agreement receiver");
       uint256 payorBalance = payorBalances[agreement.payor];
+      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
+      uint256 periods = now - agreement.lastPayment;
+      uint256 amountOwed = uint256(getOwedPayee(agreement, totalAmount, totalBalances, periods));
 
       // consider marking subscription terminated in this case
-      require(amount <= payorBalance, "amount can not exceed payor balance");
+      require(amountOwed > 0, "amount owed must be greater than 0");
+      require(amountOwed <= payorBalance, "amount can not exceed payor balance");
 
       // withdraw from savings to subscription contract
-      compound.withdraw(daiAddress, amount);
+      compound.withdraw(daiAddress, amountOwed);
 
       agreement.lastPayment = now;
-      dai.transfer(msg.sender, amount);
-      payorBalances[agreement.payor] = payorBalance.sub(amount);
-      totalBalances = totalBalances.sub(amount);
-      emit WithdrawFunds(msg.sender,  amount, agreementId);
+      dai.transfer(msg.sender, amountOwed);
+      payorBalances[agreement.payor] = payorBalance.sub(amountOwed);
+      totalBalances = totalBalances.sub(amountOwed);
+      emit WithdrawFunds(msg.sender,  amountOwed, agreementId);
     }
 
-    function supply(uint256 amount) public returns (uint256) {
+    function supply(uint256 amount) public {
       uint256 balance = payorBalances[msg.sender];
       bool daiTransfer = dai.transferFrom(msg.sender, address(this), amount);
       require(daiTransfer, "Failed to transfer DAI");
@@ -202,7 +212,6 @@ contract Subscription {
       payorBalances[msg.sender] = newBalance;
       totalBalances = totalBalances.add(amount);
       emit SupplyReceived(msg.sender, amount, balance, newBalance, totalBalances);
-      return 0;
     }
 
     function createAgreement(
