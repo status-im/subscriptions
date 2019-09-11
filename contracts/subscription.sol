@@ -31,9 +31,12 @@ contract Subscription {
     bytes16 internal constant SECONDS_IN_A_YEAR_QUAD = 0x4017e187e00000000000000000000000;
     bytes16 internal constant ONE = 0x3fff0000000000000000000000000000;
 
+    // ===================================
+
     address public daiAddress;
     uint256 internal totalBalances;
     uint256 public minDepositRatio = 12;
+    bytes16 public interestIndex = ONE;
 
 
     constructor(
@@ -84,6 +87,7 @@ contract Subscription {
     }
 
     mapping(address => uint256) public payorBalances;
+    mapping(uint256 => bytes16) public interestIndexSnapshots;
 
     /**
       * @dev map: keccask256(...args) -> Agreement
@@ -96,6 +100,27 @@ contract Subscription {
      */
     function() payable external {
       revert();
+    }
+
+    function updateInterestIndex() internal {
+      bytes16 updatedInterestIndex = calculateInterestIndex();
+      interestIndexSnapshots[now] = updatedInterestIndex;
+      interestIndex = updatedInterestIndex;
+    }
+
+    function calculateInterestIndex() view public returns (bytes16){
+      bytes16 totalAmount = getTotalAmount().toBytes();
+      bytes16 balances = totalBalances.toBytes();
+      if (totalAmount.eq(balances)) {
+        return interestIndex;
+      }
+      bytes16 totalInterest = totalAmount.sub(balances);
+      bytes16 totalReturn = totalInterest.div(balances);
+      return interestIndex.mul(ONE.add(totalReturn));
+    }
+
+    function getTotalAmount() view public returns (uint256) {
+      return compound.getSupplyBalance(address(this), daiAddress);
     }
 
     function getInterestOwed(uint256 amountOwed) view public returns (uint256) {
@@ -113,21 +138,18 @@ contract Subscription {
       returns (int256)
     {
       Agreement memory agreement = agreements[agreementId];
-      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
-      uint256 periods = now - agreement.lastPayment;
-      return getOwedPayee(agreement, totalAmount, totalBalances, periods);
+      uint256 lastPayment = agreement.lastPayment;
+      bytes16 periods = (now - lastPayment).toBytes();
+      bytes16 periodicRate = getPeriodicRate(lastPayment, periods);
+      return getOwedPayee(agreement.payRate, periods, periodicRate);
     }
 
-    function getOwedPayee(Agreement memory agreement, uint totalAmount, uint totalBalances, uint periods)
+    function getOwedPayee(uint payRate, bytes16 periods, bytes16 periodicRate)
       pure
       public
       returns (int256)
     {
-      uint256 lastPayment = agreement.lastPayment;
-      uint256 periodic = agreement.payRate;
-      uint256 totalInterest = totalAmount - totalBalances;
-      bytes16 periodicRate = computePeriodicRate(totalInterest, periods, totalBalances);
-      return getAnnuityDueQuad(periodic.toBytes(), periodicRate, periods.toBytes());
+      return getAnnuityDueQuad(payRate.toBytes(), periodicRate, periods);
     }
 
     function getAnnuityDueQuad(bytes16 periodicPayment, bytes16 rate, bytes16 elapsedTime)
@@ -151,6 +173,17 @@ contract Subscription {
       uint base = 100;
       bytes16 interestRate = rate.toBytes().div(base.toBytes());
       return getAnnuityDueQuad(periodicPayment.toBytes(), interestRate, elapsedTime.toBytes());
+    }
+
+    function getPeriodicRate(uint start, bytes16 periods)
+      public
+      view
+      returns (bytes16)
+    {
+      bytes16 startingIndex = interestIndexSnapshots[start];
+      bytes16 totalInterest = calculateInterestIndex().sub(startingIndex);
+      bytes16 effectiveRate = totalInterest.div(startingIndex);
+      return effectiveRate.div(periods);
     }
 
     function computePeriodicRate(uint totalInterest, uint elapsedTime, uint totalBalances)
@@ -181,15 +214,15 @@ contract Subscription {
       return interestOwed.add(amountOwed);
     }
 
+
     function withdrawFundsPayee(bytes32 agreementId) public {
       Agreement storage agreement = agreements[agreementId];
       require(msg.sender == agreement.receiver, "caller is not agreement receiver");
       uint256 payorBalance = payorBalances[agreement.payor];
       uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
       uint256 periods = now - agreement.lastPayment;
-      uint256 amountOwed = uint256(getOwedPayee(agreement, totalAmount, totalBalances, periods));
+      uint256 amountOwed = uint256(getOwedById(agreementId));
 
-      // consider marking subscription terminated in this case
       require(amountOwed > 0, "amount owed must be greater than 0");
       require(amountOwed <= payorBalance, "amount can not exceed payor balance");
 
@@ -207,10 +240,11 @@ contract Subscription {
       uint256 balance = payorBalances[msg.sender];
       bool daiTransfer = dai.transferFrom(msg.sender, address(this), amount);
       require(daiTransfer, "Failed to transfer DAI");
+      updateInterestIndex();
       compound.supply(daiAddress, amount);
       uint256 newBalance = balance.add(amount);
       payorBalances[msg.sender] = newBalance;
-      totalBalances = totalBalances.add(amount);
+      totalBalances = getTotalAmount();
       emit SupplyReceived(msg.sender, amount, balance, newBalance, totalBalances);
     }
 

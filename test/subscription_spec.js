@@ -83,6 +83,7 @@ contract("subscription", function () {
           const val = returnValues[i+1]
           assert.equal(val, arg, `${val} does not match arg ${arg}`)
       })
+
     });
 
     it('should get amount owed to receiver', async function() {
@@ -137,17 +138,16 @@ contract("subscription", function () {
     })
 
     it('should allow the receiver to withdraw funds accrued', async function() {
-      // THIS test will fail until interest calculation adapts for new deposits and withdraws
       const owed = await Subscription.methods.getOwedById(
         returnValues.agreementId
       ).call({from: receiver})
-      console.log({owed})
 
       const withdrawn = await Subscription.methods.withdrawFundsPayee(
         returnValues.agreementId
       ).send({ from: receiver })
       const returned = withdrawn.events.WithdrawFunds
-      console.log({returned})
+      const withdrawAmount = returned.returnValues.amount
+      assert(withdrawAmount === owed, 'withdrawn amount does not match amount owed')
     })
 
     //TODO allow payor to withdraw funds and terminate subscription.

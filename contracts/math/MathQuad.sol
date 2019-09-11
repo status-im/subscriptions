@@ -122,9 +122,9 @@ library MathQuad {
 
     if (exponent < 16383) return 0; // Underflow
 
-    require (uint128 (x) < 0x80000000000000000000000000000000); // Negative
+    require (uint128 (x) < 0x80000000000000000000000000000000, "Can't convert negitive to uint"); // Negative
 
-    require (exponent <= 16638); // Overflow
+    require (exponent <= 16638, "exponent overflowed"); // Overflow
     uint256 result = uint256 (uint128 (x)) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF |
       0x10000000000000000000000000000;
 
@@ -407,7 +407,7 @@ library MathQuad {
   function sign (bytes16 x) internal pure returns (int8) {
     uint128 absoluteX = uint128 (x) & 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
-    require (absoluteX <= 0x7FFF0000000000000000000000000000); // Not NaN
+    require (absoluteX <= 0x7FFF0000000000000000000000000000, "Can not get sign from NaN"); // Not NaN
 
     if (absoluteX == 0) return 0;
     else if (uint128 (x) >= 0x80000000000000000000000000000000) return -1;
