@@ -135,7 +135,7 @@ contract Subscription {
     function getOwedById(bytes32 agreementId)
       view
       public
-      returns (int256)
+      returns (uint256)
     {
       Agreement memory agreement = agreements[agreementId];
       uint256 lastPayment = agreement.lastPayment;
@@ -147,7 +147,7 @@ contract Subscription {
     function getOwedPayee(uint payRate, bytes16 periods, bytes16 periodicRate)
       pure
       public
-      returns (int256)
+      returns (uint256)
     {
       return getAnnuityDueQuad(payRate.toBytes(), periodicRate, periods);
     }
@@ -155,20 +155,20 @@ contract Subscription {
     function getAnnuityDueQuad(bytes16 periodicPayment, bytes16 rate, bytes16 elapsedTime)
       public
       pure
-      returns (int256)
+      returns (uint256)
     {
       bytes16 rateTime = rate.mul(elapsedTime);
       bytes16 eToRT = rateTime.exp();
       bytes16 eToR = rate.exp();
       bytes16 reduced = eToRT.sub(ONE).div(eToR.sub(ONE));
       bytes16 result = periodicPayment.mul(reduced);
-      return result.toInt();
+      return result.toUInt();
     }
 
     function getAnnuityDueWrapper(uint periodicPayment, uint rate, uint elapsedTime)
       public
       pure
-      returns (int256)
+      returns (uint256)
     {
       uint base = 100;
       bytes16 interestRate = rate.toBytes().div(base.toBytes());
@@ -219,13 +219,12 @@ contract Subscription {
       Agreement storage agreement = agreements[agreementId];
       require(msg.sender == agreement.receiver, "caller is not agreement receiver");
       uint256 payorBalance = payorBalances[agreement.payor];
-      uint256 totalAmount = compound.getSupplyBalance(address(this), daiAddress);
-      uint256 periods = now - agreement.lastPayment;
-      uint256 amountOwed = uint256(getOwedById(agreementId));
+      uint256 amountOwed = getOwedById(agreementId);
 
       require(amountOwed > 0, "amount owed must be greater than 0");
       require(amountOwed <= payorBalance, "amount can not exceed payor balance");
 
+      updateInterestIndex();
       // withdraw from savings to subscription contract
       compound.withdraw(daiAddress, amountOwed);
 
